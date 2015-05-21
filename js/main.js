@@ -33,20 +33,16 @@ var map_styles = [
 
 
 $(document).ready(function(){
-	initialize();
-    console.log(marker_list);
+	get_images();
 });
 
 
 
-function get_locations() {
+function get_images() {
 
-
-};
-
-
-
-function initialize() {
+    var info =  new google.maps.InfoWindow({
+            content: ''
+                    });
 
 $.ajax({
     dataType: 'jsonp',
@@ -59,45 +55,36 @@ $.ajax({
         //console.log('data.items doop', data.items);
         $.each(data.items, function(i, obj) {
 
-            //image url 
-            //console.log('src', obj.media.m);
-
-            // takes the image id.
-            // console.log(obj.link.split("/")[5]);
-
             // geolocation request
 
-            $.getJSON('http://api.flickr.com/services/rest/?method=flickr.photos.geo.getLocation&api_key=a5e95177da353f58113fd60296e1d250&photo_id='+obj.link.split("/")[5]+'&format=json&nojsoncallback=1',
+            $.getJSON('http://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=a5e95177da353f58113fd60296e1d250&photo_id='+obj.link.split("/")[5]+'&format=json&nojsoncallback=1',
                 function(data){
-                    if(data.stat != 'fail') {
+                    if(data.photo.location != undefined) {
                         // Lats & longs
-                        //console.log('Lat: ' + data.photo.location.latitude + ' Lon: ' + data.photo.location.longitude);
-                        
+                        console.log(data.photo);
                         marker_list.push(data.photo);
 
                         for (i in marker_list){
-                            console.log(marker_list[i]);
+                            
+
+                            //console.log(marker_list[i].id);
 
                             templatlon = new google.maps.LatLng(marker_list[i].location.latitude, marker_list[i].location.longitude);   
 
                             var marker = new google.maps.Marker({
                                 map: map,
                                 position: templatlon,
-                                title: marker_list[i].id
+                                title: marker_list[i].title._content
                             });
+
+                            infowindow(marker, map, info, '<img src="http://farm'+marker_list[i].farm+'.static.flickr.com/'+marker_list[i].server+'/'+marker_list[i].id+'_'+marker_list[i].secret+'_m.jpg" title="'+marker_list[i].title._content+'"/>');
+
+
                         }
-
-
-
-                        //console.log(templatlon);
-
-                        // marker_list.push(data.photo);
-                        // console.log(marker_list);
 
                     }
                 });
 
-            $('<img src="'+obj.media.m+'" title="'+obj.title+'"/>').appendTo('.pictures');
         });
         waitAllimages();
     }
@@ -112,20 +99,31 @@ function mapload() {
 
     mapOptions = {
         zoom: 3,
-        center: new google.maps.LatLng(-34.397, 150.644),
-        styles: map_styles
+        center: new google.maps.LatLng(38.118492, -39.555226),
+        styles: map_styles,
+        disableDefaultUI: true
     };
     
     
     // New map
       map = new google.maps.Map(document.getElementById('map-canvas'),mapOptions);
 
+      $('#map-canvas').height($('#body').height());
+
 
 };
 
+function infowindow(marker, map, infowindow, html){
+
+            google.maps.event.addListener(marker, 'click', function() {
+            infowindow.setContent(html);
+            infowindow.open(map, marker);
+        });
+
+}
 
 
-function waitAllimages() { // Wait dom ready
+function waitAllimages() { // Wait for DOM ready
     var $img = $('img'); // images collection
 
     var totalImg = $img.length;
@@ -145,4 +143,49 @@ function waitAllimages() { // Wait dom ready
 };
 
 
+//
+
+function base_encode(num) {
+    var alphabet = '123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
+    var base_count = alphabet.length;
+    var encoded = '';
+    while (num >= base_count) {
+        var div = num/base_count;
+        var mod = (num-(base_count*intval(div)));
+        encoded = alphabet.charAt(mod) + encoded;
+        num = intval(div);
+    }
+    if (num) encoded = alphabet.charAt(num) + encoded;
+    return encoded;
+}
+
+
+
+
+//for flickr short link base58 encoding above.
+
+function intval(mixed_var, base) {
+  //  discuss at: http://phpjs.org/functions/intval/
+  // original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+  // improved by: stensi
+  // bugfixed by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+  // bugfixed by: Brett Zamir (http://brett-zamir.me)
+  // bugfixed by: Rafał Kukawski (http://kukawski.pl)
+
+
+  var tmp;
+
+  var type = typeof mixed_var;
+
+  if (type === 'boolean') {
+    return +mixed_var;
+  } else if (type === 'string') {
+    tmp = parseInt(mixed_var, base || 10);
+    return (isNaN(tmp) || !isFinite(tmp)) ? 0 : tmp;
+  } else if (type === 'number' && isFinite(mixed_var)) {
+    return mixed_var | 0;
+  } else {
+    return 0;
+  }
+};
 
